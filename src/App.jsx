@@ -6,7 +6,7 @@ import { TooltipProvider } from "@/components/ui/tool-tip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { Layout } from "./components/Layout";
-import IntroAnimation from "@/components/IntroAnimated"; // exact path/casing
+import IntroAnimated from "@/components/IntroAnimated"; // ✅ Corrected import
 
 const Index = React.lazy(() => import("./pages/Index"));
 const Products = React.lazy(() => import("./pages/Products"));
@@ -37,16 +37,16 @@ export default function AppRoot() {
         <Toaster />
         <Sonner />
         <BrowserRouter>
-          {/* Always mount the intro at start when showIntro is true */}
+          {/* ✅ Show intro animation first */}
           {showIntro && (
-            <IntroAnimation
+            <IntroAnimated
               leftImageSrc="/images/man.jpg"
               rightImageSrc="/images/woman.jpg"
               onComplete={handleIntroComplete}
             />
           )}
 
-          {/* Only render the app once intro is done */}
+          {/* ✅ Load main app after intro completes */}
           {!showIntro && (
             <Layout>
               <Suspense fallback={<Loading />}>
