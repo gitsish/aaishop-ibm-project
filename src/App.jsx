@@ -6,7 +6,7 @@ import { TooltipProvider } from "@/components/ui/tool-tip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { Layout } from "./components/Layout";
-import IntroAnimation from "@/components/introAnimation"; // exact path/casing
+import IntroAnimation from "@/components/IntroAnimation"; // exact path/casing
 
 const Index = React.lazy(() => import("./pages/Index"));
 const Products = React.lazy(() => import("./pages/Products"));
