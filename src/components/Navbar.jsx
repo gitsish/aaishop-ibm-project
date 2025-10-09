@@ -1,5 +1,6 @@
-import { useState, useMemo } from "react";
-import { Link } from "react-router-dom";
+// src/components/Navbar.jsx
+import React, { useState, useMemo } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import { ShoppingBag, Search, Menu, X, Heart, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,12 +9,28 @@ import { useCart } from "@/hooks/useCart";
 export const Navbar = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const { items } = useCart();
+  const navigate = useNavigate();
+
+  // controlled search state (shared between desktop + mobile)
+  const [searchValue, setSearchValue] = useState("");
 
   // memoize computed count for small perf win
   const cartItemCount = useMemo(
     () => items.reduce((sum, item) => sum + item.quantity, 0),
     [items],
   );
+
+  // submit handler navigates to /products?q=...
+  const submitSearch = (e) => {
+    e?.preventDefault?.();
+    const q = (searchValue || "").trim();
+    const params = new URLSearchParams();
+    if (q) params.set("q", q);
+    // preserve category param if you want later; here we only set q
+    navigate({ pathname: "/products", search: params.toString() });
+    // if mobile menu was open, close it
+    setIsMenuOpen(false);
+  };
 
   return (
     <nav className="sticky top-0 z-50 bg-background border-b border-border shadow-sm">
@@ -26,16 +43,30 @@ export const Navbar = () => {
           </Link>
 
           {/* Desktop Search */}
-          <div className="hidden md:flex flex-1 max-w-md mx-8" role="search" aria-label="Site search">
-            <div className="relative w-full">
+          <div className="hidden md:flex flex-1 mx-8" role="search" aria-label="Site search">
+            <form onSubmit={submitSearch} className="relative w-full max-w-xl">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
                 type="search"
                 placeholder="Search for products, brands and more"
-                className="pl-10 w-full"
+                className="pl-10 pr-24 w-full"
                 aria-label="Search products"
+                value={searchValue}
+                onChange={(e) => setSearchValue(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Escape") {
+                    setSearchValue("");
+                  }
+                }}
               />
-            </div>
+              <button
+                type="submit"
+                className="absolute right-2 top-1/2 -translate-y-1/2 px-3 py-1 rounded bg-primary text-white text-sm"
+                aria-label="Search"
+              >
+                Search
+              </button>
+            </form>
           </div>
 
           {/* Desktop Menu */}
@@ -48,9 +79,7 @@ export const Navbar = () => {
               variant="ghost"
               size="icon"
               aria-label="Wishlist"
-              onClick={() => {
-                /* navigate to wishlist or open wishlist UI */
-              }}
+              onClick={() => navigate("/products?category=accessories-shoes")}
             >
               <Heart className="h-5 w-5" />
             </Button>
@@ -59,9 +88,7 @@ export const Navbar = () => {
               variant="ghost"
               size="icon"
               aria-label="Profile"
-              onClick={() => {
-                /* open profile menu or navigate */
-              }}
+              onClick={() => navigate("/login")}
             >
               <User className="h-5 w-5" />
             </Button>
@@ -98,15 +125,24 @@ export const Navbar = () => {
 
         {/* Mobile Search */}
         <div className="md:hidden pb-3" role="search" aria-label="Site search (mobile)">
-          <div className="relative">
+          <form onSubmit={submitSearch} className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
               type="search"
               placeholder="Search products..."
-              className="pl-10 w-full"
+              className="pl-10 pr-20 w-full"
               aria-label="Search products"
+              value={searchValue}
+              onChange={(e) => setSearchValue(e.target.value)}
             />
-          </div>
+            <button
+              type="submit"
+              className="absolute right-2 top-1/2 -translate-y-1/2 px-2 py-1 rounded bg-primary text-white text-sm"
+              aria-label="Search"
+            >
+              Go
+            </button>
+          </form>
         </div>
       </div>
 
@@ -123,10 +159,13 @@ export const Navbar = () => {
               Products
             </Link>
 
-            <Link
-              to="/cart"
-              className="flex items-center justify-between py-2 text-sm font-medium hover:text-primary transition-colors"
-              onClick={() => setIsMenuOpen(false)}
+            <button
+              type="button"
+              className="flex items-center justify-between py-2 text-sm font-medium hover:text-primary transition-colors w-full"
+              onClick={() => {
+                setIsMenuOpen(false);
+                navigate("/cart");
+              }}
               role="menuitem"
               aria-label={`Cart, ${cartItemCount} items`}
             >
@@ -136,19 +175,6 @@ export const Navbar = () => {
                   {cartItemCount}
                 </span>
               )}
-            </Link>
-
-            <button
-              type="button"
-              className="block py-2 text-sm font-medium hover:text-primary transition-colors w-full text-left"
-              onClick={() => {
-                setIsMenuOpen(false);
-                /* navigate to wishlist */
-              }}
-              role="menuitem"
-              aria-label="Wishlist"
-            >
-              Wishlist
             </button>
 
             <button
@@ -156,12 +182,25 @@ export const Navbar = () => {
               className="block py-2 text-sm font-medium hover:text-primary transition-colors w-full text-left"
               onClick={() => {
                 setIsMenuOpen(false);
-                /* navigate to profile */
+                navigate("/products?category=accessories-shoes");
               }}
               role="menuitem"
-              aria-label="Profile"
+              aria-label="Wishlist / Accessories"
             >
-              Profile
+              Accessories & Shoes
+            </button>
+
+            <button
+              type="button"
+              className="block py-2 text-sm font-medium hover:text-primary transition-colors w-full text-left"
+              onClick={() => {
+                setIsMenuOpen(false);
+                navigate("/login");
+              }}
+              role="menuitem"
+              aria-label="Profile / Login"
+            >
+              Profile / Login
             </button>
           </div>
         </div>
