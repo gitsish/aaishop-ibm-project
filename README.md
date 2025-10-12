@@ -189,15 +189,10 @@ Or connect GitHub directly to Vercel for **CI/CD auto-deployment** on push.
 
 ---
 
-## 📸 Screenshots
+|                                               🏠 Home Page                                               |                                               ❤️ Wishlist                                               |                                               🛒 Cart                                               |
+| :------------------------------------------------------------------------------------------------------: | :-----------------------------------------------------------------------------------------------------: | :-------------------------------------------------------------------------------------------------: |
+| ![Home Page Screenshot](https://github.com/user-attachments/assets/d81f78d3-18b9-4b19-a6b8-b37859be24dc) | ![Wishlist Screenshot](https://github.com/user-attachments/assets/d3a6d3a5-8bd6-43cd-8f58-c2f31f825bf6) | ![Cart Screenshot](https://github.com/user-attachments/assets/0c06d503-5b92-4d13-a4a1-2c50db0d0042) |
 
-| Home Page                                                      | Wishlist                                                            | Cart                                                          |
-| -------------------------------------------------------------- | ------------------------------------------------------------------- | ------------------------------------------------------------- |
-| ![Home](<img width="1917" height="927" alt="Screenshot 2025-10-09 015901" src="https://github.com/user-attachments/assets/d81f78d3-18b9-4b19-a6b8-b37859be24dc" />
-) | ![Wishlist](<img width="1373" height="552" alt="image" src="https://github.com/user-attachments/assets/d3a6d3a5-8bd6-43cd-8f58-c2f31f825bf6" />
-) | ![Cart](<img width="1090" height="593" alt="image" src="https://github.com/user-attachments/assets/0c06d503-5b92-4d13-a4a1-2c50db0d0042" />
-) |
----
 
 ## 🧑‍💻 Author
 
