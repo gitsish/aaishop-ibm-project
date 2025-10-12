@@ -1,35 +1,66 @@
-// src/components/Navbar.jsx
 import React, { useState, useMemo } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { ShoppingBag, Search, Menu, X, Heart, User } from "lucide-react";
+import { ShoppingBag, Search, Menu, X, Heart, User, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+
+// Hooks (keep existing paths)
 import { useCart } from "@/hooks/useCart";
+import { useAuth } from "@/contexts/AuthContext";
+import { useWishlist } from "@/hooks/useWishlist";
+
+import AuthModal from "@/components/AuthModal";
+import ReviewModal from "@/components/ReviewModal";
 
 export const Navbar = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const { items } = useCart();
-  const navigate = useNavigate();
+  const [showAuth, setShowAuth] = useState(false);
 
-  // controlled search state (shared between desktop + mobile)
-  const [searchValue, setSearchValue] = useState("");
+    // call hooks normally (WishlistProvider must wrap App)
+  const cartHook = useCart ? useCart() : { items: [] };
+  const auth = useAuth ? useAuth() : {};
 
-  // memoize computed count for small perf win
+  // wishlist now comes from WishlistContext (items, has, toggle)
+  const { items: wishlistItems = [], has: wishlistHas, toggle: wishlistToggle } = useWishlist() || {};
+
+  // safe fallbacks for cart
+  const cartItems = Array.isArray(cartHook.items) ? cartHook.items : [];
+
+
   const cartItemCount = useMemo(
-    () => items.reduce((sum, item) => sum + item.quantity, 0),
-    [items],
+    () =>
+      Array.isArray(cartItems)
+        ? cartItems.reduce((sum, item) => sum + (item.quantity || 0), 0)
+        : 0,
+    [cartItems],
   );
 
-  // submit handler navigates to /products?q=...
+  const wishlistCount = Array.isArray(wishlistItems) ? wishlistItems.length : 0;
+
+  const navigate = useNavigate();
+  const [searchValue, setSearchValue] = useState("");
+
   const submitSearch = (e) => {
     e?.preventDefault?.();
     const q = (searchValue || "").trim();
     const params = new URLSearchParams();
     if (q) params.set("q", q);
-    // preserve category param if you want later; here we only set q
     navigate({ pathname: "/products", search: params.toString() });
-    // if mobile menu was open, close it
     setIsMenuOpen(false);
+  };
+
+  const handleWishlistClick = () => {
+    // open auth modal if not signed in, otherwise go to wishlist
+    if (!auth?.user) {
+      setShowAuth(true);
+      window.dispatchEvent(new CustomEvent("open-auth", { detail: { mode: "login" } }));
+      return;
+    }
+    navigate("/wishlist");
+  };
+
+  const handleLogout = () => {
+    if (typeof auth?.logout === "function") auth.logout();
   };
 
   return (
@@ -54,9 +85,7 @@ export const Navbar = () => {
                 value={searchValue}
                 onChange={(e) => setSearchValue(e.target.value)}
                 onKeyDown={(e) => {
-                  if (e.key === "Escape") {
-                    setSearchValue("");
-                  }
+                  if (e.key === "Escape") setSearchValue("");
                 }}
               />
               <button
@@ -75,24 +104,54 @@ export const Navbar = () => {
               Products
             </Link>
 
-            <Button
-              variant="ghost"
-              size="icon"
-              aria-label="Wishlist"
-              onClick={() => navigate("/products?category=accessories-shoes")}
-            >
-              <Heart className="h-5 w-5" />
-            </Button>
+            {/* Wishlist button with badge */}
+            <div className="relative">
+              <Button variant="ghost" size="icon" aria-label="Wishlist" onClick={handleWishlistClick}>
+                <Heart className="h-5 w-5" />
+              </Button>
+              {wishlistCount > 0 && (
+                <span
+                  className="absolute -top-1 -right-1 bg-primary text-primary-foreground text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center"
+                  aria-hidden="false"
+                >
+                  {wishlistCount}
+                </span>
+              )}
+            </div>
 
+            {/* Profile / Login */}
             <Button
               variant="ghost"
               size="icon"
               aria-label="Profile"
-              onClick={() => navigate("/login")}
+              onClick={() =>
+                auth?.user
+                  ? navigate("/profile")
+                  : (setShowAuth(true), window.dispatchEvent(new CustomEvent("open-auth", { detail: { mode: "login" } })))
+              }
             >
               <User className="h-5 w-5" />
             </Button>
 
+            {auth?.user ? (
+              <>
+                <span className="text-sm hidden md:inline">Hi, {auth.user.name}</span>
+                <Button variant="ghost" size="icon" aria-label="Logout" onClick={handleLogout}>
+                  <LogOut className="h-5 w-5" />
+                </Button>
+              </>
+            ) : (
+              <Button
+                variant="ghost"
+                size="icon"
+                aria-label="Login"
+                onClick={() => (setShowAuth(true), window.dispatchEvent(new CustomEvent("open-auth", { detail: { mode: "login" } })) )}
+              >
+                <User className="h-5 w-5" />
+              </Button>
+            )}
+
+            {/* Cart with badge */}
             <Link to="/cart" aria-label={`Cart (${cartItemCount} items)`}>
               <Button variant="ghost" size="icon" className="relative">
                 <ShoppingBag className="h-5 w-5" />
@@ -182,12 +241,12 @@ export const Navbar = () => {
               className="block py-2 text-sm font-medium hover:text-primary transition-colors w-full text-left"
               onClick={() => {
                 setIsMenuOpen(false);
-                navigate("/products?category=accessories-shoes");
+                handleWishlistClick();
               }}
               role="menuitem"
               aria-label="Wishlist / Accessories"
             >
-              Accessories & Shoes
+              Wishlist
             </button>
 
             <button
@@ -195,7 +254,8 @@ export const Navbar = () => {
               className="block py-2 text-sm font-medium hover:text-primary transition-colors w-full text-left"
               onClick={() => {
                 setIsMenuOpen(false);
-                navigate("/login");
+                if (auth?.user) navigate("/profile");
+                else (setShowAuth(true), window.dispatchEvent(new CustomEvent("open-auth", { detail: { mode: "login" } })));
               }}
               role="menuitem"
               aria-label="Profile / Login"
@@ -205,6 +265,14 @@ export const Navbar = () => {
           </div>
         </div>
       )}
+
+      {/* Auth Modal - controlled locally so clicking profile opens it */}
+      <AuthModal open={showAuth} onClose={() => setShowAuth(false)} />
+
+      {/* ReviewModal kept in DOM (it internally uses ReviewContext to show/hide itself) */}
+      <ReviewModal />
     </nav>
   );
 };
+
+export default Navbar;

@@ -1,4 +1,3 @@
-// src/App.jsx
 import React, { Suspense, useState } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
@@ -6,14 +5,10 @@ import { TooltipProvider } from "@/components/ui/tool-tip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { Layout } from "./components/Layout";
-import IntroAnimated from "@/components/IntroAnimated"; // ✅ Corrected import
-
-const Index = React.lazy(() => import("./pages/Index"));
-const Products = React.lazy(() => import("./pages/Products"));
-const ProductDetail = React.lazy(() => import("./pages/ProductDetail"));
-const Cart = React.lazy(() => import("./pages/Cart"));
-const NotFound = React.lazy(() => import("./pages/NotFound"));
-
+import IntroAnimated from "@/components/IntroAnimated";
+import { AuthProvider } from "@/contexts/AuthContext";
+import { ReviewProvider } from "@/contexts/ReviewContext";
+import { WishlistProvider } from "@/contexts/WishlistContext";
 const queryClient = new QueryClient();
 
 const Loading = () => (
@@ -25,6 +20,15 @@ const Loading = () => (
 );
 
 export default function AppRoot() {
+  // lazy imports moved *inside* the component to avoid TDZ/circular errors
+  const Index = React.lazy(() => import("./pages/Index"));
+  const Products = React.lazy(() => import("./pages/Products"));
+  const ProductDetail = React.lazy(() => import("./pages/ProductDetail"));
+  const Cart = React.lazy(() => import("./pages/Cart"));
+  const NotFound = React.lazy(() => import("./pages/NotFound"));
+  const Wishlist = React.lazy(() => import("./pages/Wishlist"));
+  const Profile = React.lazy(() => import("./pages/Profile"));
+
   const [showIntro, setShowIntro] = useState(true);
 
   const handleIntroComplete = () => {
@@ -37,7 +41,6 @@ export default function AppRoot() {
         <Toaster />
         <Sonner />
         <BrowserRouter>
-          {/* ✅ Show intro animation first */}
           {showIntro && (
             <IntroAnimated
               leftImageSrc="/images/man.jpg"
@@ -46,19 +49,27 @@ export default function AppRoot() {
             />
           )}
 
-          {/* ✅ Load main app after intro completes */}
           {!showIntro && (
-            <Layout>
-              <Suspense fallback={<Loading />}>
-                <Routes>
-                  <Route path="/" element={<Index />} />
-                  <Route path="/products" element={<Products />} />
-                  <Route path="/products/:id" element={<ProductDetail />} />
-                  <Route path="/cart" element={<Cart />} />
-                  <Route path="*" element={<NotFound />} />
-                </Routes>
-              </Suspense>
-            </Layout>
+            <AuthProvider>
+              {/* IMPORTANT: WishlistProvider must be inside AuthProvider so it can read useAuth().user */}
+              <WishlistProvider>
+                <ReviewProvider>
+                  <Layout>
+                    <Suspense fallback={<Loading />}>
+                      <Routes>
+                        <Route path="/" element={<Index />} />
+                        <Route path="/products" element={<Products />} />
+                        <Route path="/products/:id" element={<ProductDetail />} />
+                        <Route path="/cart" element={<Cart />} />
+                        <Route path="/wishlist" element={<Wishlist />} />
+                        <Route path="/profile" element={<Profile />} />
+                        <Route path="*" element={<NotFound />} />
+                      </Routes>
+                    </Suspense>
+                  </Layout>
+                </ReviewProvider>
+              </WishlistProvider>
+            </AuthProvider>
           )}
         </BrowserRouter>
       </TooltipProvider>

@@ -1,4 +1,4 @@
-// src/components/IntroAnimated.jsx
+// src/components/IntroAnimation.jsx
 import React, { useEffect, useState, useRef } from "react";
 
 /**
@@ -17,7 +17,7 @@ import React, { useEffect, useState, useRef } from "react";
  * Put images in /public/images/ or import them (recommended for bundlers).
  */
 
-export default function IntroAnimated({
+export default function IntroAnimation({
   onComplete,
   leftImageSrc,
   rightImageSrc,

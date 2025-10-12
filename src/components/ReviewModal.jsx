@@ -1,74 +1,95 @@
 // src/components/ReviewModal.jsx
-import React, { useEffect, useState } from "react";
+import React from "react";
+import { X, Star } from "lucide-react";
 import { useReview } from "@/contexts/ReviewContext";
-import { useAuth } from "@/contexts/AuthContext";
 
-export default function ReviewModal({ productsData }) {
-  const { openFor, close } = useReview();
-  const { user } = useAuth();
-  const [name, setName] = useState(user?.name || "");
-  const [text, setText] = useState("");
-  const [reviews, setReviews] = useState([]);
+export default function ReviewModal() {
+  const review = useReview();
 
-  useEffect(() => {
-    if (!openFor) return;
-    setName(user?.name || "");
-    setText("");
-    const saved = JSON.parse(localStorage.getItem(`productReviews_${openFor}`) || "[]");
-    setReviews(saved);
-  }, [openFor, user]);
+  if (!review) return null; // context missing
+  const { isOpen, close, productId, getMock } = review;
 
-  if (!openFor) return null;
+  if (!isOpen || !productId) return null;
 
-  const submit = (e) => {
-    e.preventDefault();
-    const newReview = {
-      id: Date.now().toString(),
-      name: name || "Anonymous",
-      text,
-      date: new Date().toISOString(),
-    };
-    const key = `productReviews_${openFor}`;
-    const saved = JSON.parse(localStorage.getItem(key) || "[]");
-    saved.unshift(newReview);
-    localStorage.setItem(key, JSON.stringify(saved));
-    setReviews(saved);
-    setText("");
-    // show overlay message
-    alert("Thanks — your review is posted!");
-    close();
-  };
+  const data = getMock(productId);
+  const { avgRating, reviewsCount, boughtCount, reviews, photos } = data;
 
   return (
-    <div className="fixed inset-0 z-60 flex items-center justify-center bg-black/40">
-      <div className="bg-card w-full max-w-lg p-6 rounded-lg shadow-lg">
-        <h3 className="text-xl font-semibold mb-2">Add a review</h3>
-        <form onSubmit={submit} className="space-y-3">
-          <input value={name} onChange={(e)=>setName(e.target.value)} placeholder="Your name" className="w-full input" />
-          <textarea value={text} onChange={(e)=>setText(e.target.value)} placeholder="Write a quick review" rows={4} className="w-full input" />
-          <div className="flex justify-between">
-            <div className="text-sm text-muted-foreground">Be respectful — keep it constructive.</div>
-            <div className="flex gap-2">
-              <button type="button" onClick={close} className="btn btn-ghost">Cancel</button>
-              <button type="submit" className="btn btn-primary">Post review</button>
-            </div>
-          </div>
-        </form>
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-black/40" onClick={close} />
 
-        {/* Recent reviews preview */}
-        {reviews.length > 0 && (
-          <div className="mt-4">
-            <h4 className="font-semibold mb-2">Recent reviews</h4>
-            <div className="space-y-3 max-h-40 overflow-auto">
-              {reviews.map((r) => (
-                <div key={r.id} className="p-3 rounded border">
-                  <div className="text-sm font-medium">{r.name} <span className="text-xs text-muted-foreground ml-2">{new Date(r.date).toLocaleString()}</span></div>
-                  <div className="text-sm">{r.text}</div>
+      <div className="relative w-full max-w-3xl bg-white rounded-2xl shadow-xl z-10 overflow-auto max-h-[85vh]">
+        {/* Header */}
+        <div className="flex items-center justify-between p-4 border-b">
+          <div>
+            <h3 className="text-xl font-semibold">Customer reviews</h3>
+            <p className="text-sm text-muted-foreground">
+              {avgRating} <span className="mx-1">·</span> {reviewsCount} reviews · {boughtCount.toLocaleString()}+ bought
+            </p>
+          </div>
+
+          <button className="p-2 rounded hover:bg-muted" onClick={close} aria-label="Close reviews">
+            <X />
+          </button>
+        </div>
+
+        {/* Body */}
+        <div className="p-4 space-y-4">
+          {/* Top: rating big + photos */}
+          <div className="flex flex-col md:flex-row md:items-start md:gap-6">
+            <div className="flex items-center gap-4">
+              <div className="flex flex-col items-center justify-center w-28 h-28 rounded-lg bg-gradient-to-br from-yellow-50 to-yellow-100">
+                <div className="text-3xl font-bold">{avgRating}</div>
+                <div className="flex items-center gap-1 mt-1">
+                  {Array.from({ length: 5 }).map((_, i) => (
+                    <Star key={i} className={`h-4 w-4 ${i < Math.round(avgRating) ? "fill-warning text-warning" : "text-muted-foreground"}`} />
+                  ))}
                 </div>
-              ))}
+                <div className="text-xs text-muted-foreground mt-1">average rating</div>
+              </div>
+            </div>
+
+            <div className="flex-1">
+              <h4 className="font-medium">What customers are saying</h4>
+              <div className="mt-3 grid grid-cols-3 gap-2">
+                {photos.map((p, idx) => (
+                  <img key={idx} src={p} alt={`customer ${idx}`} className="w-full h-24 object-cover rounded-md" />
+                ))}
+              </div>
+              <p className="text-sm text-muted-foreground mt-3">
+                {boughtCount.toLocaleString()}+ customers purchased this — here are latest reviews and photos.
+              </p>
             </div>
           </div>
-        )}
+
+          {/* Reviews list */}
+          <div className="space-y-3">
+            {reviews.map((r) => (
+              <div key={r.id} className="flex gap-3 p-3 rounded-md border">
+                <img src={r.avatar} alt={r.name} className="w-12 h-12 rounded-full object-cover" />
+                <div className="flex-1">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="font-semibold text-sm">{r.name}</div>
+                      <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                        {Array.from({ length: 5 }).map((_, i) => (
+                          <Star key={i} className={`h-3 w-3 ${i < r.rating ? "fill-warning text-warning" : "text-muted-foreground"}`} />
+                        ))}
+                      </div>
+                    </div>
+                    <div className="text-xs text-muted-foreground">{r.date}</div>
+                  </div>
+                  <div className="text-sm mt-1">{r.text}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* CTA */}
+          <div className="flex justify-end">
+            <button onClick={close} className="px-4 py-2 rounded bg-slate-700 text-white">Close</button>
+          </div>
+        </div>
       </div>
     </div>
   );

@@ -12,7 +12,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { products } from "@/data/products.mjs"; // <- named export
+import { products } from "@/data/products.mjs";
 import { useCart } from "@/hooks/useCart";
 import { toast } from "sonner";
 import {
@@ -22,6 +22,7 @@ import {
   CarouselNext,
   CarouselPrevious,
 } from "@/components/ui/carousel";
+import { useReview } from "@/contexts/ReviewContext";
 
 const PLACEHOLDER = "https://via.placeholder.com/400x500?text=No+Image";
 
@@ -29,16 +30,24 @@ const ProductDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const { addItem } = useCart();
+  const { open: openReview } = useReview();
 
   const [selectedSize, setSelectedSize] = useState("");
   const [selectedColor, setSelectedColor] = useState("");
+  const [reviews, setReviews] = useState([]);
 
-  // safer lookup — compare as strings
   const product = products.find((p) => String(p.id) === String(id));
 
   useEffect(() => {
-    // scroll to top on product change
     window.scrollTo(0, 0);
+    if (id) {
+      try {
+        const saved = JSON.parse(localStorage.getItem(`productReviews_${id}`) || "[]");
+        setReviews(saved);
+      } catch {
+        setReviews([]);
+      }
+    }
   }, [id]);
 
   if (!product) {
@@ -70,15 +79,37 @@ const ProductDetail = () => {
   };
 
   const handleBuyNow = () => {
-    // attempt to add to cart (will validate) then navigate
     handleAddToCart();
     navigate("/cart");
   };
 
+  // ✅ FIXED: Wishlist logic with localStorage persistence
   const handleWishlistClick = () => {
-    // simple fallback: show toast (replace with auth/modal logic as needed)
-    toast.success("Added to wishlist");
+    try {
+      const stored = JSON.parse(localStorage.getItem("wishlist")) || [];
+      const exists = stored.some((item) => item.id === product.id);
+
+      if (exists) {
+        toast.warning("Already in wishlist");
+        return;
+      }
+
+      stored.push(product);
+      localStorage.setItem("wishlist", JSON.stringify(stored));
+      toast.success("Added to wishlist");
+    } catch (err) {
+      console.error("Wishlist error:", err);
+      toast.error("Something went wrong while saving");
+    }
   };
+
+  const openReviewModal = () => openReview(String(product.id));
+
+  const averageRating = (() => {
+    if (reviews.length === 0) return Number(product.rating || 0);
+    const sum = reviews.reduce((s, r) => s + (Number(r.rating) || 0), 0);
+    return +(sum / reviews.length).toFixed(1);
+  })();
 
   return (
     <div className="min-h-screen bg-background">
@@ -102,7 +133,7 @@ const ProductDetail = () => {
             <Carousel className="w-full">
               <CarouselContent>
                 {(product.images ?? []).length > 0 ? (
-                  (product.images ?? []).map((image, index) => (
+                  product.images.map((image, index) => (
                     <CarouselItem key={index}>
                       <div className="aspect-[3/4] rounded-2xl overflow-hidden bg-muted">
                         <img
@@ -110,9 +141,7 @@ const ProductDetail = () => {
                           alt={`${product.name} - ${index + 1}`}
                           className="h-full w-full object-cover"
                           loading="lazy"
-                          onError={(e) => {
-                            e.currentTarget.src = PLACEHOLDER;
-                          }}
+                          onError={(e) => (e.currentTarget.src = PLACEHOLDER)}
                         />
                       </div>
                     </CarouselItem>
@@ -120,11 +149,7 @@ const ProductDetail = () => {
                 ) : (
                   <CarouselItem>
                     <div className="aspect-[3/4] rounded-2xl overflow-hidden bg-muted flex items-center justify-center">
-                      <img
-                        src={PLACEHOLDER}
-                        alt="No image"
-                        className="h-full w-full object-cover"
-                      />
+                      <img src={PLACEHOLDER} alt="No image" />
                     </div>
                   </CarouselItem>
                 )}
@@ -136,7 +161,6 @@ const ProductDetail = () => {
 
           {/* Product Info */}
           <div className="space-y-6">
-            {/* Brand & Badge */}
             <div className="flex items-center justify-between">
               <p className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
                 {product.brand}
@@ -156,7 +180,6 @@ const ProductDetail = () => {
               )}
             </div>
 
-            {/* Name */}
             <h1 className="text-3xl md:text-4xl font-bold">{product.name}</h1>
 
             {/* Rating */}
@@ -166,7 +189,7 @@ const ProductDetail = () => {
                   <Star
                     key={i}
                     className={`h-5 w-5 ${
-                      i < Math.floor(Number(product.rating) || 0)
+                      i < Math.floor(Number(averageRating) || 0)
                         ? "fill-warning text-warning"
                         : "text-muted"
                     }`}
@@ -174,9 +197,14 @@ const ProductDetail = () => {
                 ))}
               </div>
               <span className="text-sm">
-                {product.rating ?? "0.0"} (
-                {(product.reviews ?? 0).toLocaleString()} reviews)
+                {averageRating} ({reviews.length > 0 ? reviews.length : (product.reviews ?? 0).toLocaleString()} reviews)
               </span>
+              <button
+                onClick={openReviewModal}
+                className="ml-4 text-sm underline text-primary hover:opacity-90"
+              >
+                Write a review
+              </button>
             </div>
 
             {/* Price */}
@@ -261,6 +289,7 @@ const ProductDetail = () => {
               >
                 Buy Now
               </Button>
+
               <Button
                 size="lg"
                 variant="outline"
@@ -269,7 +298,18 @@ const ProductDetail = () => {
               >
                 <Heart className="h-5 w-5" />
               </Button>
-              <Button size="lg" variant="outline" aria-label="Share product">
+
+              <Button
+                size="lg"
+                variant="outline"
+                aria-label="Share product"
+                onClick={() =>
+                  navigator.share?.({
+                    title: product.name,
+                    url: window.location.href,
+                  })
+                }
+              >
                 <Share2 className="h-5 w-5" />
               </Button>
             </div>
@@ -290,7 +330,7 @@ const ProductDetail = () => {
               </div>
             </div>
 
-            {/* Description */}
+            {/* Description + Reviews */}
             <div className="pt-6 border-t border-border">
               <h3 className="text-lg font-semibold mb-3">Product Details</h3>
               <p className="text-muted-foreground leading-relaxed">
